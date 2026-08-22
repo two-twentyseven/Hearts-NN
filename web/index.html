@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hearts</title>
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/cards.css">
+  <link rel="stylesheet" href="/css/table.css">
+  <link rel="stylesheet" href="/css/components.css">
+</head>
+<body>
+  <div id="error-banner" class="error-banner hidden" role="alert"></div>
+
+  <div id="app">
+    <header class="top-bar">
+      <h1 class="title">Hearts</h1>
+      <div class="top-bar__actions">
+        <span class="round-badge" id="round-badge">Round —</span>
+        <button id="btn-new-game" class="btn btn--primary" type="button">New game</button>
+      </div>
+    </header>
+
+    <main class="game-layout">
+      <aside class="scoreboard" id="scoreboard">
+        <h2 class="scoreboard__title">Scores</h2>
+        <div class="scoreboard__meta">
+          <span>Target: <strong id="target-score">100</strong></span>
+          <span id="hearts-broken-badge" class="hearts-broken-badge hidden">♥ Broken</span>
+        </div>
+        <div class="pass-pattern" id="pass-pattern">
+          <h3 class="pass-pattern__title">Pass pattern</h3>
+          <div class="pass-cycle" id="pass-pattern-cycle"></div>
+        </div>
+        <div class="scoreboard__table" id="score-table"></div>
+      </aside>
+
+      <section class="table-area">
+        <div class="table" id="table">
+          <div class="status-banner" id="status-banner">Loading…</div>
+
+          <div class="player-zone player-zone--north" id="zone-north" data-seat="2">
+            <div class="player-label" id="label-north">North</div>
+            <div class="opponent-hand" id="hand-north"></div>
+          </div>
+
+          <div class="player-zone player-zone--west" id="zone-west" data-seat="1">
+            <div class="player-label" id="label-west">West</div>
+            <div class="opponent-hand" id="hand-west"></div>
+          </div>
+
+          <div class="player-zone player-zone--east" id="zone-east" data-seat="3">
+            <div class="player-label" id="label-east">East</div>
+            <div class="opponent-hand" id="hand-east"></div>
+          </div>
+
+          <div class="pass-arrows hidden" id="pass-arrows" aria-hidden="true"></div>
+
+          <div class="trick-pile trick-pile--north" id="pile-north" aria-label="North tricks"></div>
+          <div class="trick-pile trick-pile--west" id="pile-west" aria-label="West tricks"></div>
+          <div class="trick-pile trick-pile--east" id="pile-east" aria-label="East tricks"></div>
+          <div class="trick-pile trick-pile--south" id="pile-south" aria-label="Your tricks"></div>
+
+          <div class="trick-area" id="trick-area">
+            <div class="trick-slot trick-slot--north" id="trick-north"></div>
+            <div class="trick-slot trick-slot--west" id="trick-west"></div>
+            <div class="trick-slot trick-slot--east" id="trick-east"></div>
+            <div class="trick-slot trick-slot--south" id="trick-south"></div>
+          </div>
+
+          <div class="player-zone player-zone--south" id="zone-south" data-seat="0">
+            <div class="player-label" id="label-south">You</div>
+            <div class="human-hand" id="hand-south"></div>
+          </div>
+
+          <div class="welcome-screen" id="welcome-screen">
+            <div class="welcome-screen__panel">
+              <h2>Hearts</h2>
+              <p>Play against three computer opponents. Avoid hearts and the Queen of Spades — lowest score wins.</p>
+              <p class="welcome-screen__hint">Server required: <code>uvicorn hearts.api.app:app --reload</code></p>
+              <button id="btn-start" class="btn btn--action btn--large" type="button">Start game</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-bar hidden" id="action-bar">
+          <button id="btn-pass" class="btn btn--action" type="button" disabled>Pass cards</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="animation-layer" id="animation-layer" aria-hidden="true"></div>
+
+  <div class="loading-overlay hidden" id="loading-overlay" aria-hidden="true">
+    <div class="loading-spinner"></div>
+  </div>
+
+  <div class="modal hidden" id="modal-round" aria-hidden="true">
+    <div class="modal__backdrop"></div>
+    <div class="modal__panel">
+      <h2 class="modal__title">Round complete</h2>
+      <div class="modal__body" id="modal-round-body"></div>
+      <button id="btn-next-round" class="btn btn--primary" type="button">Next hand</button>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="modal-game-over" aria-hidden="true">
+    <div class="modal__backdrop"></div>
+    <div class="modal__panel">
+      <h2 class="modal__title">Game over</h2>
+      <div class="modal__body" id="modal-game-over-body"></div>
+      <button id="btn-play-again" class="btn btn--primary" type="button">Play again</button>
+    </div>
+  </div>
+
+  <script type="module" src="/js/main.js?v=8"></script>
+</body>
+</html>

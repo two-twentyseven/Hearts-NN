@@ -1,0 +1,173 @@
+.card {
+  position: relative;
+  width: var(--card-width);
+  height: var(--card-height);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  user-select: none;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  overflow: hidden;
+  background: transparent;
+}
+
+.card__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.card--selectable,
+.card--legal {
+  cursor: pointer;
+}
+
+.card--selectable:hover,
+.card--legal:hover {
+  transform: translateY(-14px) !important;
+  box-shadow: var(--card-shadow-hover);
+  z-index: 30 !important;
+}
+
+.card--selected {
+  transform: translateY(-20px) !important;
+  box-shadow: var(--card-shadow-hover);
+  z-index: 40 !important;
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.card--illegal {
+  opacity: 0.35;
+  cursor: default;
+  filter: saturate(0.4);
+}
+
+.card--played {
+  animation: cardPlay 0.22s ease;
+}
+
+@keyframes cardPlay {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.opponent-hand {
+  display: flex;
+  gap: 0;
+  justify-content: center;
+}
+
+.opponent-hand .card {
+  width: 28px;
+  height: 41.2px;
+  border-radius: 3px;
+}
+
+.human-hand {
+  --hand-strip-width: 54px;
+  --hand-strip-height: 80px;
+  --hand-strip-overlap: 30px;
+  --hand-strip-visible: calc(var(--hand-strip-width) - var(--hand-strip-overlap));
+
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  min-height: calc(var(--hand-strip-height) + 36px);
+  padding: 0 4px;
+  position: relative;
+  z-index: 10;
+}
+
+.hand-card {
+  position: relative;
+  width: var(--hand-strip-width);
+  height: var(--hand-strip-height);
+  flex-shrink: 0;
+  margin-left: calc(-1 * var(--hand-strip-overlap));
+  background: #fff;
+  border: 1px solid #c8c4bc;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+  user-select: none;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease;
+  overflow: hidden;
+}
+
+.hand-card:first-child {
+  margin-left: 0;
+}
+
+.hand-card__index {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: var(--hand-strip-visible);
+  min-width: var(--hand-strip-visible);
+  height: 100%;
+  padding: 6px 0 0;
+  line-height: 1;
+  gap: 2px;
+}
+
+.hand-card__rank {
+  font-size: 1.3125rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-family: var(--font-ui);
+}
+
+.hand-card--wide-rank .hand-card__rank {
+  font-size: 1.0625rem;
+}
+
+.hand-card__suit {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.hand-card--red .hand-card__rank,
+.hand-card--red .hand-card__suit {
+  color: #c41e3a;
+}
+
+.hand-card--black .hand-card__rank,
+.hand-card--black .hand-card__suit {
+  color: #1a1a1a;
+}
+
+.hand-card--selectable,
+.hand-card--legal {
+  cursor: pointer;
+}
+
+.hand-card--selectable:hover:not(.hand-card--selected),
+.hand-card--legal:hover:not(.hand-card--selected) {
+  transform: translateY(-14px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+}
+
+.hand-card--selected {
+  transform: translateY(-18px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4), 0 0 0 2px var(--accent);
+}
+
+.hand-card--illegal {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.trick-slot .card {
+  width: 68px;
+  height: 100.1px;
+}
