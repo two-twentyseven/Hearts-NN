@@ -167,7 +167,73 @@
   cursor: default;
 }
 
+.hand-card--choice {
+  box-shadow: 0 0 0 2px var(--warning);
+  z-index: 5;
+}
+
+.hand-card--option {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.player-zone:has(.opponent-hand--open) {
+  z-index: 7;
+}
+
+.opponent-hand--open {
+  flex-wrap: wrap;
+  gap: 3px;
+  max-width: 520px;
+}
+
+.opponent-hand--open .hand-card {
+  --hand-strip-width: 30px;
+  --hand-strip-height: 42px;
+  --hand-strip-overlap: 0px;
+  width: 30px;
+  height: 42px;
+  margin-left: 0;
+  border-radius: 4px;
+}
+
+.opponent-hand--open .hand-card__index {
+  width: 100%;
+  min-width: 0;
+  padding-top: 4px;
+  gap: 0;
+}
+
+.opponent-hand--open .hand-card__rank {
+  font-size: 0.75rem;
+}
+
+.opponent-hand--open .hand-card__suit {
+  font-size: 0.7rem;
+}
+
+.opponent-hand--open .hand-card--wide-rank .hand-card__rank {
+  font-size: 0.65rem;
+}
+
+.player-zone--north .opponent-hand--open {
+  flex-wrap: nowrap;
+  width: max-content;
+  max-width: none;
+}
+
+.player-zone--west .opponent-hand--open,
+.player-zone--east .opponent-hand--open {
+  display: grid;
+  grid-template-columns: repeat(4, 30px);
+  max-width: 132px;
+}
+
+.card--just-played {
+  box-shadow: 0 0 0 3px var(--warning);
+  border-radius: var(--card-radius);
+}
+
 .trick-slot .card {
-  width: 68px;
-  height: 100.1px;
+  width: 76px;
+  height: 106.4px;
 }

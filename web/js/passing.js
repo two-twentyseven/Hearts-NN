@@ -40,10 +40,21 @@ export function renderHumanHand(state, onCardClick) {
   const isPassing = state.phase === "PASSING" && !state.pass_submitted[0];
   const isPlaying = state.phase === "PLAYING" && state.current_player === 0;
 
+  const reviewing = Boolean(state.reviewing);
+  const reviewMine = reviewing && state.review_actor === 0;
+  const reviewLegal = new Set(reviewMine ? state.review_legal || [] : []);
+
   sorted.forEach((cardId, index) => {
     let options = { zIndex: index + 1 };
 
-    if (isPassing) {
+    if (reviewing) {
+      options = {
+        ...options,
+        choice: reviewMine && cardId === state.review_card,
+        option: reviewMine && reviewLegal.has(cardId) && cardId !== state.review_card,
+        illegal: reviewMine && !reviewLegal.has(cardId),
+      };
+    } else if (isPassing) {
       options = {
         ...options,
         selectable: true,

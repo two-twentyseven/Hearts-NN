@@ -104,6 +104,7 @@ def state_for_viewer(
     viewer: int,
     *,
     game_id: str,
+    difficulty: str = "random",
 ) -> dict[str, Any]:
     hand = sort_cards(state.hands[viewer])
     legal_moves: list[Card] = []
@@ -120,6 +121,10 @@ def state_for_viewer(
         "viewer": viewer,
         "hand": [card_to_id(card) for card in hand],
         "legal_moves": [card_to_id(card) for card in legal_moves],
+        "hands": [
+            [card_to_id(card) for card in sort_cards(seat_hand)]
+            for seat_hand in state.hands
+        ],
         "hand_counts": [len(hand_cards) for hand_cards in state.hands],
         "current_player": state.current_player,
         "trick_leader": state.trick_leader,
@@ -142,4 +147,5 @@ def state_for_viewer(
         "players": list(PLAYER_NAMES),
         "messages": _build_messages(state, viewer),
         "target_score": state.config.target_score,
+        "difficulty": difficulty,
     }

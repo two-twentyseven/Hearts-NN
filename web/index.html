@@ -16,6 +16,15 @@
     <header class="top-bar">
       <h1 class="title">Hearts</h1>
       <div class="top-bar__actions">
+        <div class="review-controls hidden" id="review-controls">
+          <button id="btn-review-back" class="btn btn--icon" type="button" aria-label="Back" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5 9 12l5.5 5.5"/></svg>
+          </button>
+          <button id="btn-reveal-hands" class="btn btn--toggle" type="button" aria-pressed="false">Reveal hands</button>
+          <button id="btn-review-forward" class="btn btn--icon" type="button" aria-label="Forward" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6.5 15 12l-5.5 5.5"/></svg>
+          </button>
+        </div>
         <span class="round-badge" id="round-badge">Round —</span>
         <button id="btn-new-game" class="btn btn--primary" type="button">New game</button>
       </div>
@@ -77,6 +86,24 @@
             <div class="welcome-screen__panel">
               <h2>Hearts</h2>
               <p>Play against three computer opponents. Avoid hearts and the Queen of Spades — lowest score wins.</p>
+              <fieldset class="difficulty-picker">
+                <legend>Difficulty</legend>
+                <div class="difficulty-picker__options" role="radiogroup" aria-label="Opponent difficulty">
+                  <label class="difficulty-option">
+                    <input type="radio" name="difficulty" value="random" checked>
+                    <span>Random</span>
+                  </label>
+                  <label class="difficulty-option">
+                    <input type="radio" name="difficulty" value="human">
+                    <span>Human</span>
+                  </label>
+                  <label class="difficulty-option">
+                    <input type="radio" name="difficulty" value="omniscient">
+                    <span>Omniscient</span>
+                  </label>
+                </div>
+                <p class="difficulty-picker__hint" id="difficulty-hint">Opponents pass and play at random.</p>
+              </fieldset>
               <p class="welcome-screen__hint">Server required: <code>uvicorn hearts.api.app:app --reload</code></p>
               <button id="btn-start" class="btn btn--action btn--large" type="button">Start game</button>
             </div>
@@ -114,6 +141,6 @@
     </div>
   </div>
 
-  <script type="module" src="/js/main.js?v=8"></script>
+  <script type="module" src="/js/main.js?v=10"></script>
 </body>
 </html>

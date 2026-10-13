@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,9 +10,11 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from hearts.api.bot import advance_bots, advance_one_bot
-from hearts.api.game_store import store
+from hearts.api.game_store import DEFAULT_DIFFICULTY, OMNISCIENT_DIFFICULTY, store
+from hearts.api.replay import note_opening, note_play, payload as replay_payload, reset as reset_replay
 from hearts.api.serialize import card_to_id, cards_from_ids, card_from_id, state_for_viewer
 from hearts.config import GameConfig
+from hearts.perfect.agent import shared_bot
 from hearts.rules import NUM_PLAYERS, pass_target
 from hearts.state import GameState, IllegalMoveError
 
@@ -45,6 +48,10 @@ app.add_middleware(
 )
 
 
+class CreateGameRequest(BaseModel):
+    difficulty: Literal["random", "human", "omniscient"] = DEFAULT_DIFFICULTY
+
+
 class PassRequest(BaseModel):
     cards: list[str]
 
@@ -54,7 +61,16 @@ class PlayRequest(BaseModel):
 
 
 def _view(game_id: str, state: GameState) -> dict:
-    return state_for_viewer(state, store.human_player, game_id=game_id)
+    return state_for_viewer(
+        state,
+        store.human_player,
+        game_id=game_id,
+        difficulty=store.difficulty(game_id),
+    )
+
+
+def _bot_kwargs(game_id: str) -> dict:
+    return {"human": store.human_player, "difficulty": store.difficulty(game_id)}
 
 
 def _get_state(game_id: str) -> GameState:
@@ -93,18 +109,41 @@ def _save_and_view(
     store.set(game_id, state)
     view = _view(game_id, state)
     view["action"] = _serialize_action(action)
+    view["replay"] = replay_payload(game_id)
     return view
 
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok", "engine": "hearts"}
+    bot = shared_bot()
+    return {
+        "status": "ok",
+        "engine": "hearts",
+        "omniscient_available": bot.available(),
+        "omniscient_checkpoint": str(bot.checkpoint),
+    }
 
 
 @app.post("/api/games")
-def create_game() -> dict:
+def create_game(body: CreateGameRequest | None = None) -> dict:
+    difficulty = body.difficulty if body is not None else DEFAULT_DIFFICULTY
+    if difficulty == OMNISCIENT_DIFFICULTY:
+        bot = shared_bot()
+        if not bot.available():
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "reason": "NO_CHECKPOINT",
+                    "message": (
+                        f"No trained omniscient checkpoint at {bot.checkpoint}. "
+                        "Run scripts/perfect_self_play.py first."
+                    ),
+                },
+            )
     state = GameState.new_game(GameConfig())
-    game_id = store.create(state)
+    game_id = store.create(state, difficulty=difficulty)
+    reset_replay(game_id)
+    note_opening(game_id, state)
     return _save_and_view(game_id, state)
 
 
@@ -122,12 +161,13 @@ def submit_pass(game_id: str, body: PassRequest) -> dict:
         state = state.submit_pass(store.human_player, cards)
         remaining_hand = list(state.hands[store.human_player])
         if state.phase.name == "PASSING":
-            state = advance_bots(state, store.human_player)
+            state = advance_bots(state, **_bot_kwargs(game_id))
         incoming = [
             card
             for card in state.hands[store.human_player]
             if card not in remaining_hand
         ]
+        note_opening(game_id, state)
     except (IllegalMoveError, ValueError) as exc:
         reason = exc.reason.name if isinstance(exc, IllegalMoveError) else "INVALID_PASS"
         raise HTTPException(
@@ -165,7 +205,9 @@ def play_card(game_id: str, body: PlayRequest) -> dict:
     try:
         card = card_from_id(body.card)
         trick_before = list(state.current_trick)
+        before = state
         state = state.play_card(store.human_player, card)
+        note_play(game_id, before, state, store.human_player, card)
     except (IllegalMoveError, ValueError) as exc:
         reason = exc.reason.name if isinstance(exc, IllegalMoveError) else "ILLEGAL_CARD"
         raise HTTPException(
@@ -189,7 +231,10 @@ def play_card(game_id: str, body: PlayRequest) -> dict:
 @app.post("/api/games/{game_id}/tick")
 def tick_bot(game_id: str) -> dict:
     state = _get_state(game_id)
-    state, action = advance_one_bot(state, store.human_player)
+    before = state
+    state, action = advance_one_bot(state, **_bot_kwargs(game_id))
+    if action is not None and action.get("type") == "play":
+        note_play(game_id, before, state, action["player"], action["card"])
     return _save_and_view(game_id, state, action=action)
 
 
@@ -203,6 +248,8 @@ def next_round(game_id: str) -> dict:
             status_code=400,
             detail={"reason": exc.reason.name, "message": str(exc)},
         ) from exc
+    reset_replay(game_id)
+    note_opening(game_id, state)
     return _save_and_view(game_id, state)
 
 

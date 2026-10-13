@@ -28,6 +28,7 @@ export function setChromeVisibility({ gameActive, hideNewGame = false }) {
   document.getElementById("btn-new-game").classList.toggle("hidden", !showNewGame);
   document.getElementById("round-badge").classList.toggle("hidden", !gameActive);
   document.getElementById("pass-pattern").classList.toggle("hidden", !gameActive);
+  document.getElementById("review-controls").classList.toggle("hidden", !gameActive);
 }
 
 export function setStatusText(text) {

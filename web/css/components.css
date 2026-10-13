@@ -174,6 +174,53 @@
   opacity: 0.7;
 }
 
+.review-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn--icon {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--btn-secondary);
+  color: var(--text-primary);
+}
+
+.btn--icon:hover:not(:disabled) {
+  background: var(--btn-secondary-hover);
+}
+
+.btn--icon svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.btn--toggle {
+  background: var(--btn-secondary);
+  color: var(--text-primary);
+}
+
+.btn--toggle:hover:not(:disabled) {
+  background: var(--btn-secondary-hover);
+}
+
+.btn--toggle[aria-pressed="true"] {
+  background: var(--accent-muted);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
 .modal {
   position: fixed;
   inset: 0;

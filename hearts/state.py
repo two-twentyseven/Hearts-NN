@@ -21,6 +21,16 @@ from hearts.rules import (
     two_of_clubs_holder,
 )
 
+DECK_SIZE = 52
+
+
+def _blank_card_play_tricks() -> list[list[float]]:
+    return [[0.0] * DECK_SIZE for _ in range(NUM_PLAYERS)]
+
+
+def _blank_trick_leaders() -> list[int | None]:
+    return [None] * CARDS_PER_HAND
+
 
 class Phase(Enum):
     PASSING = auto()
@@ -63,6 +73,16 @@ class GameState:
     scores: list[int] = field(default_factory=list)
     last_round_scores: list[int] | None = None
     history: list[dict[str, Any]] = field(default_factory=list)
+    card_play_tricks: list[list[float]] = field(default_factory=_blank_card_play_tricks)
+    trick_leaders: list[int | None] = field(default_factory=_blank_trick_leaders)
+
+    def __post_init__(self) -> None:
+        if (
+            self.phase is Phase.PLAYING
+            and 1 <= self.trick_number <= CARDS_PER_HAND
+            and self.trick_leaders[self.trick_number - 1] is None
+        ):
+            self.trick_leaders[self.trick_number - 1] = self.trick_leader
 
     @classmethod
     def new_game(cls, config: GameConfig | None = None) -> GameState:
@@ -102,6 +122,8 @@ class GameState:
 
         if direction is PassDirection.HOLD:
             leader = two_of_clubs_holder(hands)
+            leaders = _blank_trick_leaders()
+            leaders[0] = leader
             return replace(
                 self,
                 phase=Phase.PLAYING,
@@ -117,6 +139,8 @@ class GameState:
                 tricks_won=[[] for _ in range(NUM_PLAYERS)],
                 last_round_scores=None,
                 history=self.history + [{"event": "deal", "round": round_number}],
+                card_play_tricks=_blank_card_play_tricks(),
+                trick_leaders=leaders,
             )
 
         return replace(
@@ -134,6 +158,8 @@ class GameState:
             tricks_won=[[] for _ in range(NUM_PLAYERS)],
             last_round_scores=None,
             history=self.history + [{"event": "deal", "round": round_number}],
+            card_play_tricks=_blank_card_play_tricks(),
+            trick_leaders=_blank_trick_leaders(),
         )
 
     def submit_pass(self, player: int, cards: list[Card]) -> GameState:
@@ -197,6 +223,8 @@ class GameState:
             new_hands[target].extend(cards)
 
         leader = two_of_clubs_holder(new_hands)
+        leaders = _blank_trick_leaders()
+        leaders[0] = leader
         return replace(
             self,
             phase=Phase.PLAYING,
@@ -205,6 +233,8 @@ class GameState:
             trick_leader=leader,
             current_player=leader,
             history=self.history + [{"event": "passes_applied"}],
+            card_play_tricks=_blank_card_play_tricks(),
+            trick_leaders=leaders,
         )
 
     def legal_moves_for(self, player: int | None = None) -> list[Card]:
@@ -248,11 +278,14 @@ class GameState:
         new_hands = deepcopy(self.hands)
         new_hands[player].remove(card)
         new_trick = list(self.current_trick) + [(player, card)]
+        new_plays = [row[:] for row in self.card_play_tricks]
+        new_plays[player][card.card_id] = self.trick_number / float(CARDS_PER_HAND)
         state = replace(
             self,
             hands=new_hands,
             current_trick=new_trick,
             history=self.history + [{"event": "play", "player": player, "card": card}],
+            card_play_tricks=new_plays,
         )
 
         if len(new_trick) < NUM_PLAYERS:
@@ -270,6 +303,9 @@ class GameState:
 
         hearts_broken = self.hearts_broken or trick_has_heart(self.current_trick)
         next_trick_number = self.trick_number + 1
+        new_leaders = list(self.trick_leaders)
+        if next_trick_number <= CARDS_PER_HAND:
+            new_leaders[next_trick_number - 1] = winner
 
         state = replace(
             self,
@@ -280,6 +316,7 @@ class GameState:
             trick_leader=winner,
             current_player=winner,
             history=self.history + [{"event": "trick_won", "player": winner}],
+            trick_leaders=new_leaders,
         )
 
         if next_trick_number > CARDS_PER_HAND:

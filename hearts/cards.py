@@ -36,6 +36,21 @@ class Card:
     suit: Suit
 
     @property
+    def suit_index(self) -> int:
+        """0=clubs, 1=diamonds, 2=hearts, 3=spades (enum declaration order)."""
+        return self.suit.value - 1
+
+    @property
+    def rank_index(self) -> int:
+        """0=two … 12=ace."""
+        return self.rank.value - 2
+
+    @property
+    def card_id(self) -> int:
+        """Canonical 0–51 index: suit_index * 13 + rank_index."""
+        return self.suit_index * 13 + self.rank_index
+
+    @property
     def is_heart(self) -> bool:
         return self.suit is Suit.HEARTS
 

@@ -1,4 +1,4 @@
-import { initGame } from "./game.js?v=7";
+import { initGame } from "./game.js?v=8";
 import { showError } from "./ui.js";
 
 document.addEventListener("DOMContentLoaded", () => {

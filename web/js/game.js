@@ -27,13 +27,136 @@ import {
 } from "./scoring.js";
 import { clearError, setChromeVisibility, setLoading, setStatusText, showError, showWelcome } from "./ui.js";
 
+const DIFFICULTY_HINTS = {
+  random: "Opponents pass and play at random.",
+  human: "Opponents use human passing and play heuristics.",
+  omniscient:
+    "Opponents see every card in every hand and search ahead with the self-play trained network.",
+};
+const DIFFICULTIES = Object.keys(DIFFICULTY_HINTS);
+
+const SUIT_SYMBOL = { C: "♣", D: "♦", H: "♥", S: "♠" };
+
 let gameId = null;
 let currentState = null;
 let busy = false;
+let revealHands = false;
+let reviewCursor = 0;
+let atLive = true;
+let seenRound = null;
+
+function selectedDifficulty() {
+  const checked = document.querySelector('input[name="difficulty"]:checked');
+  return DIFFICULTIES.includes(checked?.value) ? checked.value : "random";
+}
+
+function syncDifficultyHint() {
+  const hint = document.getElementById("difficulty-hint");
+  if (hint) hint.textContent = DIFFICULTY_HINTS[selectedDifficulty()];
+}
 
 function setButtonDisabled(id, disabled) {
   const button = document.getElementById(id);
   if (button) button.disabled = disabled;
+}
+
+function prettyCard(cardId) {
+  if (!cardId || cardId.length < 2) return cardId || "";
+  const rank = cardId[0] === "T" ? "10" : cardId[0];
+  return `${rank}${SUIT_SYMBOL[cardId[1]] || cardId[1]}`;
+}
+
+function timeline(state) {
+  const replay = state?.replay;
+  if (!replay) return [];
+  const plays = replay.plays || [];
+  if (plays.length === 0) return [];
+  return replay.opening ? [replay.opening, ...plays] : [...plays];
+}
+
+function resetReviewCursor() {
+  reviewCursor = 0;
+  atLive = true;
+  seenRound = null;
+}
+
+function syncReviewCursor(state) {
+  const steps = timeline(state);
+  if (seenRound !== state.round_number) {
+    seenRound = state.round_number;
+    reviewCursor = steps.length;
+    atLive = true;
+    return;
+  }
+  if (atLive) {
+    reviewCursor = steps.length;
+    return;
+  }
+  reviewCursor = Math.min(reviewCursor, steps.length);
+  atLive = reviewCursor >= steps.length;
+}
+
+function viewFromFrame(live, frame) {
+  const hands = frame.hands;
+  const actor = frame.actor;
+  const viewer = live.viewer;
+  const displayHands = hands.map((cards, seat) => (
+    seat === actor && frame.decision_hand ? frame.decision_hand : cards
+  ));
+  const hand = actor === viewer && frame.decision_hand
+    ? frame.decision_hand
+    : hands[viewer];
+  let messages;
+  if (frame.kind === "opening") {
+    messages = ["Opening hands"];
+  } else {
+    const name = live.players?.[actor] ?? "Player";
+    const legalCount = frame.legal_moves?.length ?? 0;
+    messages = [`${name} played ${prettyCard(frame.card)}`, `${legalCount} legal`];
+  }
+  return {
+    ...live,
+    phase: "PLAYING",
+    hand,
+    hands: displayHands,
+    legal_moves: [],
+    hand_counts: hands.map((cards) => cards.length),
+    current_player: frame.current_player,
+    trick_number: frame.trick_number,
+    current_trick: frame.current_trick,
+    tricks_won_counts: frame.tricks_won_counts,
+    hearts_broken: frame.hearts_broken,
+    pass_submitted: [true, true, true, true],
+    messages,
+    reveal_hands: revealHands,
+    reviewing: true,
+    review_actor: actor,
+    review_card: frame.card,
+    review_legal: frame.legal_moves || [],
+  };
+}
+
+function presentedState(live) {
+  if (atLive) {
+    return { ...live, reveal_hands: revealHands, reviewing: false };
+  }
+  const steps = timeline(live);
+  const frame = steps[reviewCursor];
+  if (!frame) return { ...live, reveal_hands: revealHands, reviewing: false };
+  return viewFromFrame(live, frame);
+}
+
+function updateReviewControls() {
+  const steps = currentState ? timeline(currentState) : [];
+  const back = document.getElementById("btn-review-back");
+  const forward = document.getElementById("btn-review-forward");
+  const reveal = document.getElementById("btn-reveal-hands");
+  if (back) back.disabled = busy || !currentState || reviewCursor <= 0;
+  if (forward) forward.disabled = busy || !currentState || reviewCursor >= steps.length;
+  if (reveal) {
+    reveal.setAttribute("aria-pressed", revealHands ? "true" : "false");
+    reveal.textContent = revealHands ? "Hide hands" : "Reveal hands";
+  }
 }
 
 function setBusy(value, showOverlay = true) {
@@ -44,24 +167,30 @@ function setBusy(value, showOverlay = true) {
   setButtonDisabled("btn-next-round", value);
   setButtonDisabled("btn-play-again", value);
   setButtonDisabled("btn-start", value);
+  updateReviewControls();
 }
 
 function render(state) {
   currentState = state;
-  const modalOpen = state.phase === "ROUND_OVER" || state.phase === "GAME_OVER";
+  syncReviewCursor(state);
+  const table = presentedState(state);
+  const modalOpen = atLive && (state.phase === "ROUND_OVER" || state.phase === "GAME_OVER");
   setChromeVisibility({ gameActive: true, hideNewGame: modalOpen });
-  renderPlayerLabels(state);
-  renderOpponentHands(state);
-  renderTrick(state);
-  renderTrickPiles(state);
-  renderActivePlayer(state);
-  renderStatusBanner(state);
-  renderGameChrome(state);
+  renderPlayerLabels(table);
+  renderOpponentHands(table);
+  renderTrick(table);
+  renderTrickPiles(table);
+  renderActivePlayer(table);
+  renderStatusBanner(table);
+  renderGameChrome(table);
   renderScoreboard(state);
-  renderHumanHand(state, handlePlayCard);
-  updatePassButton(state);
+  renderHumanHand(table, handlePlayCard);
+  updatePassButton(atLive ? state : table);
+  updateReviewControls();
 
-  if (state.phase === "ROUND_OVER") {
+  if (!atLive) {
+    hideAllModals();
+  } else if (state.phase === "ROUND_OVER") {
     renderRoundModal(state);
     showModal("modal-round");
   } else if (state.phase === "GAME_OVER") {
@@ -127,16 +256,47 @@ async function runAction(
   }
 }
 
+function stepReview(delta) {
+  if (busy || !currentState) return;
+  const steps = timeline(currentState);
+  const next = reviewCursor + delta;
+  if (next < 0 || next > steps.length) return;
+  reviewCursor = next;
+  atLive = reviewCursor >= steps.length;
+  render(currentState);
+}
+
+function toggleRevealHands() {
+  revealHands = !revealHands;
+  if (currentState) render(currentState);
+  else updateReviewControls();
+}
+
 export async function startNewGame() {
+  resetReviewCursor();
   await runAction(async () => {
     resetPassingSelection();
     hideAllModals();
-    return api.createGame();
+    return api.createGame(selectedDifficulty());
   });
 }
 
+function returnToWelcome() {
+  if (busy) return;
+  gameId = null;
+  currentState = null;
+  resetReviewCursor();
+  resetPassingSelection();
+  hideAllModals();
+  renderEmptyScoreboard();
+  showWelcome(true);
+  setChromeVisibility({ gameActive: false });
+  setStatusText("Click Start Game to begin");
+  syncDifficultyHint();
+}
+
 async function handlePass() {
-  if (!gameId) return;
+  if (!atLive || !gameId) return;
   const cards = getSelectedCards();
   if (cards.length !== 3) return;
 
@@ -151,7 +311,7 @@ async function handlePass() {
 }
 
 async function handlePlayCard(cardId) {
-  if (!gameId || !currentState) return;
+  if (!atLive || !gameId || !currentState) return;
   if (currentState.phase !== "PLAYING" || currentState.current_player !== 0) return;
 
   await runAction(
@@ -161,7 +321,7 @@ async function handlePlayCard(cardId) {
 }
 
 async function handleNextRound() {
-  if (!gameId) return;
+  if (!atLive || !gameId) return;
 
   await runAction(
     async () => {
@@ -204,14 +364,21 @@ export function initGame() {
   });
 
   bindPassButton(handlePass);
-  document.getElementById("btn-new-game").addEventListener("click", startNewGame);
-  document.getElementById("btn-play-again").addEventListener("click", startNewGame);
+  document.getElementById("btn-review-back").addEventListener("click", () => stepReview(-1));
+  document.getElementById("btn-review-forward").addEventListener("click", () => stepReview(1));
+  document.getElementById("btn-reveal-hands").addEventListener("click", toggleRevealHands);
+  document.getElementById("btn-new-game").addEventListener("click", returnToWelcome);
+  document.getElementById("btn-play-again").addEventListener("click", returnToWelcome);
   document.getElementById("btn-next-round").addEventListener("click", handleNextRound);
   document.getElementById("btn-start").addEventListener("click", connectAndStart);
+  document.querySelectorAll('input[name="difficulty"]').forEach((input) => {
+    input.addEventListener("change", syncDifficultyHint);
+  });
 
   renderEmptyScoreboard();
   setChromeVisibility({ gameActive: false });
   setLoading(false);
   showWelcome(true);
   setStatusText("Click Start Game to begin");
+  syncDifficultyHint();
 }

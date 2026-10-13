@@ -63,8 +63,11 @@ async function request(path, options = {}) {
   return response.json();
 }
 
-export function createGame() {
-  return request("/games", { method: "POST" });
+export function createGame(difficulty = "random") {
+  return request("/games", {
+    method: "POST",
+    body: JSON.stringify({ difficulty }),
+  });
 }
 
 export function getGame(gameId) {

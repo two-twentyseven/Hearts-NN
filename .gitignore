@@ -13,6 +13,9 @@ build/
 dist/
 *.egg
 
+# Training artifacts (checkpoints, self-play shards)
+artifacts/
+
 # Virtual environments
 .venv/
 venv/

@@ -1,4 +1,4 @@
-import { createCardBack, createCardElement } from "./cards.js";
+import { createCardBack, createCardElement, createHandStripElement, sortCardIds } from "./cards.js";
 import { renderPassPattern } from "./pass-pattern.js";
 
 const SEAT_TO_TRICK = {
@@ -40,7 +40,23 @@ export function renderOpponentHands(state) {
   for (const seat of [1, 2, 3]) {
     const container = document.getElementById(SEAT_TO_HAND[seat]);
     container.replaceChildren();
-    container.appendChild(createCardBack(state.hand_counts[seat]));
+    const cards = state.hands?.[seat];
+    const open = Boolean(state.reveal_hands && Array.isArray(cards));
+    container.classList.toggle("opponent-hand--open", open);
+    if (!open) {
+      container.appendChild(createCardBack(state.hand_counts[seat]));
+      continue;
+    }
+    const reviewing = Boolean(state.reviewing && state.review_actor === seat);
+    const legal = new Set(reviewing ? state.review_legal || [] : []);
+    sortCardIds(cards).forEach((cardId, index) => {
+      container.appendChild(createHandStripElement(cardId, {
+        zIndex: index + 1,
+        choice: reviewing && cardId === state.review_card,
+        option: reviewing && legal.has(cardId) && cardId !== state.review_card,
+        illegal: reviewing && !legal.has(cardId),
+      }));
+    });
   }
 }
 
@@ -87,7 +103,15 @@ export function renderTrick(state) {
 
   for (const play of state.current_trick) {
     const slot = document.getElementById(SEAT_TO_TRICK[play.player]);
-    slot.appendChild(createCardElement(play.card, { played: true }));
+    const card = createCardElement(play.card, { played: true });
+    if (
+      state.reviewing
+      && play.player === state.review_actor
+      && play.card === state.review_card
+    ) {
+      card.classList.add("card--just-played");
+    }
+    slot.appendChild(card);
   }
 }
 

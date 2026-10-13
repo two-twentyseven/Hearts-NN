@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "A neural-network based AI for the card game hearts"
 readme = "README.md"
 requires-python = ">=3.11"
+dependencies = ["numpy>=1.26", "torch>=2.2"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]

@@ -6,7 +6,7 @@ const RANK_ORDER = {
 };
 
 const CARD_ASSET_BASE = "/assets/cards";
-const CARD_ASSET_VERSION = "8";
+const CARD_ASSET_VERSION = "9";
 
 const RANK_DISPLAY = {
   T: "10",
@@ -50,7 +50,7 @@ export function sortCardIds(cardIds) {
 }
 
 function cardImageSrc(cardId, faceDown = false) {
-  const file = faceDown ? "back.png" : `${cardId}.png`;
+  const file = faceDown ? "back.svg" : `${cardId}.svg`;
   return `${CARD_ASSET_BASE}/${file}?v=${CARD_ASSET_VERSION}`;
 }
 
@@ -108,6 +108,8 @@ export function createHandStripElement(cardId, options = {}) {
     selected = false,
     legal = false,
     illegal = false,
+    choice = false,
+    option = false,
     onClick = null,
     zIndex = 1,
   } = options;
@@ -127,6 +129,8 @@ export function createHandStripElement(cardId, options = {}) {
   if (selected) card.classList.add("hand-card--selected");
   if (legal) card.classList.add("hand-card--legal");
   if (illegal) card.classList.add("hand-card--illegal");
+  if (choice) card.classList.add("hand-card--choice");
+  if (option) card.classList.add("hand-card--option");
 
   const index = document.createElement("div");
   index.className = "hand-card__index";
